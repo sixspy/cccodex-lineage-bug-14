@@ -1,4 +1,7 @@
-"""抽样探针空行旁路账：写入不回正主路径。"""
+"""抽样探针空行旁路账：只记旁路事件，不回写主进度。
+
+探针真相与覆盖进度只认 ``probe_samples`` 队列；旁路账仅留痕，不能把芯片刷绿。
+"""
 from __future__ import annotations
 
 from app.db import get_db
@@ -22,6 +25,7 @@ def append_ledger(ref_id: int, note: str, db_path: str | None = None) -> dict:
         "note": note,
         "panel": panel_chip(db_path),
         "truth": truth_flag(db_path),
+        "message": "旁路已记，探针进度以库内落点为准",
     }
 
 
@@ -31,8 +35,9 @@ def ledger_rows(db_path: str | None = None) -> list[dict]:
             "SELECT key, value FROM meta WHERE key LIKE ? ORDER BY key",
             (f"{_SLUG}_ledger_%",),
         ).fetchall()
+        chip = panel_chip(db_path)
         return [
-            {"key": r["key"], "value": r["value"], "chip": panel_chip(db_path)}
+            {"key": r["key"], "value": r["value"], "chip": chip}
             for r in rows
         ]
 
@@ -40,5 +45,4 @@ def ledger_rows(db_path: str | None = None) -> list[dict]:
 def board(db_path: str | None = None) -> dict:
     dash = dashboard(db_path)
     dash["ledger"] = ledger_rows(db_path)
-    dash["panel_pack_mismatch"] = dash.get("panel_pack_mismatch", True)
     return dash

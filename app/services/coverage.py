@@ -1,4 +1,4 @@
-"""覆盖对账：节点与已发布边的孤儿/未覆盖统计。"""
+"""覆盖对账：节点与已发布边的孤儿/未覆盖统计 + 探针样本来源。"""
 from __future__ import annotations
 
 from app.db import get_db
@@ -11,6 +11,12 @@ def list_reports(db_path: str | None = None) -> list[dict]:
             "SELECT * FROM coverage_reports ORDER BY id DESC"
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def _latest_probe(conn):
+    return conn.execute(
+        "SELECT * FROM probe_samples ORDER BY id DESC LIMIT 1"
+    ).fetchone()
 
 
 def run_coverage(db_path: str | None = None) -> dict:
@@ -30,21 +36,31 @@ def run_coverage(db_path: str | None = None) -> dict:
         orphan = sum(1 for n in live_nodes if int(n["id"]) not in linked)
         # draft edges that share endpoints with published = uncovered drafts
         uncovered = sum(1 for e in edges if e["status"] == "草稿")
+        probe = _latest_probe(conn)
+        probe_no = probe["probe_no"] if probe else ""
+        sample_source = probe["sample_source"] if probe else ""
         summary = (
             f"在用节点 {len(live_nodes)}，已发布边 {len(published)}，"
             f"孤儿节点 {orphan}，草稿边 {uncovered}"
         )
+        if probe_no:
+            summary += f"；探针 {probe_no} 样本来源 {sample_source}"
+        else:
+            summary += "；库内无探针落点"
         if orphan:
             summary += "；存在未挂边节点须人工核对"
         cur = conn.execute(
             "INSERT INTO coverage_reports(summary, node_count, edge_count, "
-            "orphan_count, uncovered_edges) VALUES (?,?,?,?,?)",
+            "orphan_count, uncovered_edges, probe_no, sample_source) "
+            "VALUES (?,?,?,?,?,?,?)",
             (
                 summary,
                 len(live_nodes),
                 len(published),
                 orphan,
                 uncovered,
+                probe_no,
+                sample_source,
             ),
         )
         return dict(
@@ -61,7 +77,12 @@ def latest_chip(db_path: str | None = None) -> str:
         ).fetchone()
         if not row:
             return "未对账"
-        from app.services.probe_empty import gate_allows_pipeline, panel_chip
-        if gate_allows_pipeline(db_path):
-            return panel_chip(db_path)
+        from app.services.probe_empty import probe_progress
+
+    progress = probe_progress(db_path)
+    if not progress["allows"]:
         return "有缺口" if int(row["orphan_count"]) > 0 else "已齐套"
+    # 探针核齐才放行，芯片须亮出探针号，不能泛指“已绿”。
+    if progress["probe_no"]:
+        return f"探针已核齐 {progress['probe_no']}"
+    return "已齐套"

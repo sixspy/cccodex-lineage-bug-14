@@ -2,6 +2,8 @@ import { api } from '../api.js';
 
 export async function renderNodes(view, setMsg) {
   const j = await api('/api/nodes');
+  const snap = await api('/api/probe_empty/snap');
+  const probeTag = snap.gate_allowed ? `探针已核齐 ${snap.probe_no}` : '库无探针';
   view.innerHTML = `
     <section class="card">
       <h2>节点目录</h2>
@@ -16,7 +18,7 @@ export async function renderNodes(view, setMsg) {
     <section class="wall" style="margin-top:1rem">
       ${(j.items || []).map((n) => `<article class="card">
         <h3>${n.node_code}</h3>
-        <span class="tag">${n.status}</span> <span class="tag" data-thick="probe_empty">探针已绿</span>
+        <span class="tag">${n.status}</span> <span class="tag" data-thick="probe_empty">${probeTag}</span>
         <span class="tag">${n.layer}</span>
         <p>${n.table_name}</p>
         <p class="muted">上游 ${n.upstream_count} · 下游 ${n.downstream_count} · ${n.owner_team}</p>

@@ -36,17 +36,27 @@ def update_setting(key: str, value: str, db_path: str | None = None) -> dict:
 
 
 def pin_contract(fingerprint: str, db_path: str | None = None) -> dict:
-    from app.services.probe_empty import commit_action, panel_chip, pack_rows
+    from app.services.probe_empty import pin_probe, snapshot
 
-    commit_action({"fp": fingerprint}, db_path)
+    fp = (fingerprint or "").strip()
+    result = pin_probe({"sample_fp": fp} if fp else {}, db_path)
     with get_db(db_path) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO lab_settings(key, value, label) VALUES (?,?,?)",
-            ("contract_fp", fingerprint or "legacy", "契约指纹"),
+            ("contract_fp", result["sample_fp"], "契约指纹"),
         )
     return {
-        "fingerprint": fingerprint,
-        "chip": panel_chip(db_path),
-        "pack_count": len(pack_rows(db_path)),
-        "message": "契约已绿",
+        "fingerprint": result["sample_fp"],
+        "probe_no": result["probe_no"],
+        "sample_source": result["sample_source"],
+        "chip": result["chip"],
+        "snapshot": snapshot(db_path),
+        "message": result["message"],
     }
+
+
+def probe_panel(db_path: str | None = None) -> dict:
+    """设置页探针面：亮探针号、样本来源与放行闸门。"""
+    from app.services.probe_empty import snapshot
+
+    return snapshot(db_path)

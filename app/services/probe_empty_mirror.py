@@ -1,4 +1,4 @@
-"""抽样探针空行镜像面：列表亮、写库仍脏。"""
+"""抽样探针空行镜像面：与主队列同源，不另造一套亮灯。"""
 from __future__ import annotations
 
 from app.db import get_db
@@ -10,39 +10,28 @@ _BAD = "库无探针"
 
 
 def mirror_chip(db_path: str | None = None) -> str:
-    with get_db(db_path) as conn:
-        row = conn.execute(
-            "SELECT value FROM meta WHERE key=?",
-            (f"{_SLUG}_chip",),
-        ).fetchone()
-        return row["value"] if row else _OK
-
-
-def seed_mirror(db_path: str | None = None) -> None:
-    with get_db(db_path) as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
-            (f"{_SLUG}_chip", _OK),
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
-            (f"{_SLUG}_truth", _BAD),
-        )
+    """镜像芯片直接取主队列闸门结果，不再单独存一份可被刷绿的标记。"""
+    return dashboard(db_path)["chip"]
 
 
 def mirror_board(db_path: str | None = None) -> dict:
-    seed_mirror(db_path)
     dash = dashboard(db_path)
     return {
-        "mirror_chip": mirror_chip(db_path),
+        "mirror_chip": dash["chip"],
         "truth": truth_flag(db_path),
         "dash": dash,
-        "panel_pack_mismatch": True,
+        "panel_pack_mismatch": not dash["gate_allowed"],
         "title": "抽样探针空行镜像",
     }
 
 
 def half_mirror(db_path: str | None = None) -> dict:
+    """半修只碰展示，库内仍无落点。"""
     paint_ok(db_path)
-    seed_mirror(db_path)
-    return {"mirror_chip": mirror_chip(db_path), "truth": truth_flag(db_path)}
+    dash = dashboard(db_path)
+    return {
+        "mirror_chip": dash["chip"],
+        "truth": truth_flag(db_path),
+        "half_fixed": False,
+        "message": "镜像半修仅刷展示，库内无落点，复验仍失败",
+    }

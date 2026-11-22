@@ -1,8 +1,9 @@
-"""抽样探针空行审计旁路：只记展示事件。"""
+"""抽样探针空行审计旁路：只读事件与面板，不写进度。"""
 from __future__ import annotations
 
 from app.db import get_db
-from app.services.probe_empty_mirror import half_mirror, mirror_board
+from app.services.probe_empty import dashboard
+from app.services.probe_empty_ledger import ledger_rows
 
 
 def audit_list(db_path: str | None = None) -> list[dict]:
@@ -15,10 +16,13 @@ def audit_list(db_path: str | None = None) -> list[dict]:
 
 
 def audit_summary(db_path: str | None = None) -> dict:
-    board = mirror_board(db_path)
     return {
         "title": "抽样探针空行审计",
         "events": audit_list(db_path),
-        "board": board,
-        "half": half_mirror(db_path),
+        "board": dashboard(db_path),
+        "ledger": ledger_rows(db_path),
+        "half": {
+            "half_fixed": False,
+            "message": "审计旁路只读，不改探针进度",
+        },
     }

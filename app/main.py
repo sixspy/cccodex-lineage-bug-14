@@ -279,15 +279,25 @@ def create_app() -> Bottle:
     @app.post("/api/probe_empty/commit")
     @wrap
     def api_probe_empty_commit():
-        _require_user()
+        user = _require_user()
         body = _read_json()
-        return _json(probe_empty_svc.commit_action(body))
+        body.setdefault("pinned_by", user)
+        return _json(probe_empty_svc.pin_probe(body))
 
     @app.post("/api/probe_empty/half")
     @wrap
     def api_probe_empty_half():
         _require_user()
-        return _json(probe_empty_svc.reconcile_display())
+        return _json(probe_empty_svc.half_fix_display())
+
+    @app.post("/api/probe_empty/reconcile")
+    @wrap
+    def api_probe_empty_reconcile():
+        _require_user()
+        body = _read_json()
+        return _json(
+            probe_empty_svc.reconcile_probe(str(body.get("probe_no") or "") or None)
+        )
 
     @app.get("/api/probe_empty/snap")
     @wrap

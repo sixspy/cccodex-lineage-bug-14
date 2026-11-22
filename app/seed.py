@@ -31,6 +31,8 @@ def seed_if_needed(db_path: str | None = None) -> dict:
                 "impact_hits",
                 "impact_jobs",
                 "coverage_reports",
+                "probe_archive",
+                "probe_samples",
                 "lineage_edges",
                 "lineage_nodes",
                 "lab_settings",
@@ -92,17 +94,17 @@ def seed_if_needed(db_path: str | None = None) -> dict:
             (SCHEMA_VERSION,),
         )
         conn.execute("INSERT INTO meta(key, value) VALUES ('lab','表血缘影响台')")
-        try:
-            from app.services.probe_empty import seed_skew
-            seed_skew(db_path)
-        except Exception:
-            pass
-        return {
-            "seeded": True,
-            "nodes": len(nodes),
-            "edges": len(edges) + 1,
-            "settings": 3,
-        }
+    try:
+        from app.services.probe_empty import seed_skew
+        seed_skew(db_path)
+    except Exception:
+        pass
+    return {
+        "seeded": True,
+        "nodes": len(nodes),
+        "edges": len(edges) + 1,
+        "settings": 3,
+    }
 
 
 def reset_seed(db_path: str | None = None) -> None:
@@ -113,6 +115,8 @@ def reset_seed(db_path: str | None = None) -> None:
             "impact_hits",
             "impact_jobs",
             "coverage_reports",
+            "probe_archive",
+            "probe_samples",
             "lineage_edges",
             "lineage_nodes",
             "lab_settings",

@@ -3,11 +3,13 @@ import { api } from '../api.js';
 export async function renderNotify(view, setMsg) {
   const jobs = await api('/api/impact/jobs');
   const notes = await api('/api/notify');
+  const snap = await api('/api/probe_empty/snap');
+  const probeTag = snap.gate_allowed ? `探针已核齐 ${snap.probe_no}` : '库无探针';
   const opts = (jobs.items || []).filter((j) => j.status === '成功')
     .map((j) => `<option value="${j.id}">${j.job_code}</option>`).join('');
   view.innerHTML = `
     <section class="card">
-      <h2>下游通知</h2><span class="tag">探针已绿</span>
+      <h2>下游通知</h2><span class="tag">${probeTag}</span>
       <div class="row">
         <label>成功作业<select id="jid">${opts || '<option value="">无</option>'}</select></label>
         <button class="primary" id="go" type="button">按作业派发</button>

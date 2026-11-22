@@ -3,6 +3,8 @@ import { api } from '../api.js';
 export async function renderImpact(view, setMsg) {
   const nodes = await api('/api/nodes');
   const jobs = await api('/api/impact/jobs');
+  const snap = await api('/api/probe_empty/snap');
+  const probeTag = snap.gate_allowed ? `探针已核齐 ${snap.probe_no}` : '库无探针';
   const opts = (nodes.items || []).map((n) => `<option value="${n.id}">${n.node_code}</option>`).join('');
   view.innerHTML = `
     <section class="card">
@@ -15,7 +17,7 @@ export async function renderImpact(view, setMsg) {
     <section class="wall" style="margin-top:1rem">
       ${(jobs.items || []).map((j) => `<article class="card">
         <h3>${j.job_code}</h3>
-        <span class="tag">${j.status}</span> <span class="tag">探针已绿</span>
+        <span class="tag">${j.status}</span> <span class="tag">${probeTag}</span>
         <p>根 ${j.node_code} · 命中 ${j.affected_count}</p>
         <p class="muted">${j.message}</p>
         <button data-d="${j.id}" type="button">详情</button>
